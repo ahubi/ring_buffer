@@ -67,12 +67,14 @@ ring_buffer *ring_buffer_alloc(uint size) {
  * @rbuf: the rbuf to be freed.
  */
 void ring_buffer_free(ring_buffer *rbuf) {
-  free(rbuf->buffer);
-  free(rbuf);
+  if (ring_buffer_lock(rbuf) == 0) {
+    free(rbuf->buffer);
+    free(rbuf);
+  }
 }
 
 /**
- * ring_buffer_put - puts some data into the rbuf, no locking version
+ * ring_buffer_put - puts some data into the rbuf
  * @rbuf: the rbuf to be used.
  * @buffer: the data to be added.
  * @len: the length of the data to be added.
@@ -81,47 +83,51 @@ void ring_buffer_free(ring_buffer *rbuf) {
  * the rbuf, old data will be overwritten, and returns the number of
  * bytes copied.
  */
-unsigned int ring_buffer_put(ring_buffer *rbuf, void *buffer, uint len) {
+uint ring_buffer_put(ring_buffer *rbuf, void *buffer, uint len) {
   uint l;
+  if (ring_buffer_lock(rbuf) == 0) {
+    len = min(len, rbuf->size);
 
-  len = min(len, rbuf->size);
+    /* first put the data starting from rbuf->in to buffer end */
+    l = min(len, rbuf->size - rbuf->in);
+    memcpy(rbuf->buffer + rbuf->in, buffer, l);
 
-  /* first put the data starting from rbuf->in to buffer end */
-  l = min(len, rbuf->size - rbuf->in);
-  memcpy(rbuf->buffer + rbuf->in, buffer, l);
+    /* then put the rest (if any) at the beginning of the buffer */
+    memcpy(rbuf->buffer, buffer + l, len - l);
 
-  /* then put the rest (if any) at the beginning of the buffer */
-  memcpy(rbuf->buffer, buffer + l, len - l);
+    // Move the in pointer, it will wrap at the end of the buffer
+    rbuf->in = (rbuf->in + len) % rbuf->size;
 
-  // Move the in pointer, it will wrap at the end of the buffer
-  rbuf->in = (rbuf->in + len) % rbuf->size;
+    // Check overflow conditions in the buffer
+    if (rbuf->count + len > rbuf->size) {
+      // move 'out' index to handle overflow conditions
+      rbuf->out = rbuf->in;
+      rbuf->count = rbuf->size;
 
-  // Check overflow conditions in the buffer
-  if (rbuf->count + len > rbuf->size) {
-    // move 'out' index to handle overflow conditions
-    rbuf->out = rbuf->in;
-    rbuf->count = rbuf->size;
+      LOG(0, "overflow occured len: %d count: %d out: %d in: %d", len,
+          rbuf->count, rbuf->out, rbuf->in);
 
-    LOG(0, "ring buffer overflow occured len: %d count: %d out: %d in: %d", len,
-        rbuf->count, rbuf->out, rbuf->in);
+    } else {
+      rbuf->count += len;
+    }
 
-  } else {
-    rbuf->count = rbuf->count + len;
+    LOG(1, "len: %d count: %d out: %d in: %d", len, rbuf->count, rbuf->out,
+        rbuf->in);
+
+    if (ring_buffer_unlock(rbuf) != 0) LOG(0, "Failed to unlock ring_buffer");
+
+    // Wake up clients waiting on the buffer
+    if (ring_buffer_broadcast(rbuf) != 0)
+      LOG(0, "Failed to broadcast ring_buffer");
+    return len;
   }
-
-  LOG(1, "ring_buffer_put len: %d count: %d out: %d in: %d", len, rbuf->count,
-      rbuf->out, rbuf->in);
-
-  // Wake up clients waiting on the buffer
-  // BUFFER_BROADCAST(rbuffer);
-
-  return len;
+  return 0;
 }
 
 /**
- * ring_buffer_get - gets some data from the rbuf, no locking version
+ * ring_buffer_get - gets some data from the rbuf
  * @rbuf: the rbuf to be used.
- * @buffer: where the data must be copied.
+ * @buffer: destination buffer to copy data into
  * @len: the size of the destination buffer.
  *
  * This function copies at most @len bytes from the rbuf into the
@@ -129,18 +135,20 @@ unsigned int ring_buffer_put(ring_buffer *rbuf, void *buffer, uint len) {
  */
 uint ring_buffer_get(ring_buffer *rbuf, void *buffer, uint len) {
   uint l;
+  if (ring_buffer_lock(rbuf) == 0) {
+    // Calculate available bytes
+    len = min(len, rbuf->count);
+    /* first get the data from rbuf->out until the end of the buffer */
+    l = min(len, rbuf->size - rbuf->out);
+    memcpy(buffer, rbuf->buffer + rbuf->out, l);
 
-  // Calculate available bytes
-  len = min(len, rbuf->count); 
-  /* first get the data from rbuf->out until the end of the buffer */
-  l = min(len, rbuf->size - rbuf->out);
-  memcpy(buffer, rbuf->buffer + rbuf->out, l);
+    /* then get the rest (if any) from the beginning of the buffer */
+    memcpy(buffer + l, rbuf->buffer, len - l);
 
-  /* then get the rest (if any) from the beginning of the buffer */
-  memcpy(buffer + l, rbuf->buffer, len - l);
-
-  rbuf->out = (rbuf->out + len) % rbuf->size;
-  rbuf->count -= len;
-
-  return len;
+    rbuf->out = (rbuf->out + len) % rbuf->size;
+    rbuf->count -= len;
+    if (ring_buffer_unlock(rbuf) != 0) LOG(0, "failed to unlock ring_buffer");
+    return len;
+  }
+  return 0;
 }

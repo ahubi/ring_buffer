@@ -2,15 +2,10 @@
 #define RING_BUFFER_H_INCLUDED
 
 #include <errno.h>
-#include <stddef.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
-
 #include <pthread.h>
-#include <sys/uio.h>
 
 #define LOGLEVEL 5
 #define LOG(level, fmt, args...)                                  \
@@ -31,13 +26,13 @@ extern "C" {
 #endif
 
 typedef struct ring_buffer_ {
-  void *buffer;        /* the buffer holding the data */
-  uint size;   /* the size of the allocated buffer */
-  uint in;     /* data is added at offset (in % size) */
-  uint out;    /* data is extracted from off. (out % size) */
-  uint count;  /* number of elements available in the buffer*/
-  pthread_mutex_t mtx; /* protects concurrent modifications */
-  pthread_cond_t cnd;  /*Condition consumer threads wait on*/
+  void *buffer;         /* the buffer holding the data */
+  uint size;            /* the size of the allocated buffer */
+  uint in;              /* data is added at offset (in % size) */
+  uint out;             /* data is extracted from off. (out % size) */
+  uint count;           /* number of elements available in the buffer*/
+  pthread_mutex_t mtx;  /* protects concurrent modifications */
+  pthread_cond_t cnd;   /*Condition consumer threads wait on*/
 } ring_buffer;
 
 static inline int ring_buffer_lock(ring_buffer *rbuffer) {
@@ -62,11 +57,8 @@ static inline int ring_buffer_broadcast(ring_buffer *rbuffer) {
 // #define BUFFER_BROADCAST( buffer ) ring_buffer_broadcast(buffer)
 
 ring_buffer *ring_buffer_init(void *buffer, uint size);
-
 ring_buffer *ring_buffer_alloc(unsigned int size);
-
 void ring_buffer_free(ring_buffer *rbuffer);
-
 uint ring_buffer_put(ring_buffer *rbuffer, void *buffer, uint len);
 uint ring_buffer_get(ring_buffer *rbuffer, void *buffer, uint len);
 
