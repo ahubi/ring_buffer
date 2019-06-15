@@ -5,7 +5,7 @@
  * @size: the size of the internal buffer, this have to be a power of 2.
  * @lock: the lock to be used to protect the rbuf buffer
  */
-ring_buffer *ring_buffer_init(unsigned char *buffer, unsigned int size) {
+ring_buffer *ring_buffer_init(void *buffer, uint size) {
   int sts = 0;
   ring_buffer *rbuf;
 
@@ -44,8 +44,8 @@ ring_buffer *ring_buffer_init(unsigned char *buffer, unsigned int size) {
  * @size: the size of the internal buffer to be allocated.
  * @lock: the lock to be used to protect the rbuf buffer
  */
-ring_buffer *ring_buffer_alloc(unsigned int size) {
-  unsigned char *buffer;
+ring_buffer *ring_buffer_alloc(uint size) {
+  void *buffer;
   ring_buffer *ret;
 
   buffer = malloc(size);
@@ -81,9 +81,8 @@ void ring_buffer_free(ring_buffer *rbuf) {
  * the rbuf, old data will be overwritten, and returns the number of
  * bytes copied.
  */
-unsigned int ring_buffer_put(ring_buffer *rbuf, void *buffer,
-                             unsigned int len) {
-  unsigned int l;
+unsigned int ring_buffer_put(ring_buffer *rbuf, void *buffer, uint len) {
+  uint l;
 
   len = min(len, rbuf->size);
 
@@ -128,9 +127,8 @@ unsigned int ring_buffer_put(ring_buffer *rbuf, void *buffer,
  * This function copies at most @len bytes from the rbuf into the
  * @buffer and returns the number of copied bytes.
  */
-unsigned int ring_buffer_get(ring_buffer *rbuf, void *buffer,
-                             unsigned int len) {
-  unsigned int l;
+uint ring_buffer_get(ring_buffer *rbuf, void *buffer, uint len) {
+  uint l;
 
   // Calculate available bytes
   len = min(len, rbuf->count); 
