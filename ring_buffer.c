@@ -3,7 +3,7 @@
  * ring_buffer_init - allocates a new rbuf using a preallocated buffer
  * @buffer: the preallocated buffer to be used.
  * @size: the size of the internal buffer, this have to be a power of 2.
- * @lock: the lock to be used to protect the rbuf buffer
+ * @return: pointer to allocated ring buffer, otherwise NULL
  */
 ring_buffer *ring_buffer_init(void *buffer, uint size) {
   int sts = 0;
@@ -42,7 +42,7 @@ ring_buffer *ring_buffer_init(void *buffer, uint size) {
 /**
  * ring_buffer_alloc - allocates a new rbuf and its internal buffer
  * @size: the size of the internal buffer to be allocated.
- * @lock: the lock to be used to protect the rbuf buffer
+ * @return: pointer to allocated ring buffer, otherwise NULL
  */
 ring_buffer *ring_buffer_alloc(uint size) {
   void *buffer;
@@ -80,7 +80,7 @@ void ring_buffer_free(ring_buffer *rbuf) {
  * @len: the length of the data to be added.
  *
  * This function copies at most @len bytes from the @buffer into
- * the rbuf, old data will be overwritten, and returns the number of
+ * the @rbuf, old data might be overwritten, returns number of
  * bytes copied.
  */
 uint ring_buffer_put(ring_buffer *rbuf, void *buffer, uint len) {
