@@ -51,11 +51,6 @@ static inline int ring_buffer_broadcast(ring_buffer *rbuffer) {
   return pthread_cond_broadcast(&rbuffer->cnd);
 }
 
-// #define BUFFER_LOCK( buffer ) ring_buffer_lock(buffer)
-// #define BUFFER_UNLOCK( buffer ) ring_buffer_unlock(buffer)
-// #define BUFFER_WAIT( buffer ) ring_buffer_wait(buffer)
-// #define BUFFER_BROADCAST( buffer ) ring_buffer_broadcast(buffer)
-
 ring_buffer *ring_buffer_init(void *buffer, uint size);
 ring_buffer *ring_buffer_alloc(unsigned int size);
 void ring_buffer_free(ring_buffer *rbuffer);
