@@ -136,8 +136,12 @@ uint ring_buffer_put(ring_buffer *rbuf, void *buffer, uint len) {
 uint ring_buffer_get(ring_buffer *rbuf, void *buffer, uint len) {
   uint l;
   if (ring_buffer_lock(rbuf) == 0) {
+    // Wait till data is put into buffer
+    if (rbuf->count <= 0) ring_buffer_wait(rbuf);
+
     // Calculate available bytes
     len = min(len, rbuf->count);
+
     /* first get the data from rbuf->out until the end of the buffer */
     l = min(len, rbuf->size - rbuf->out);
     memcpy(buffer, rbuf->buffer + rbuf->out, l);
